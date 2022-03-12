@@ -1,0 +1,11 @@
+{
+    "permissionInteger": 36760576,
+    "token": "Your bot token",
+    "inviteLink": "https://discord.com/api/oauth2/authorize?client_id=<Your Client Id>&permissions=36769280&scope=applications.commands%20bot",
+    "guildIds": [
+        "Some server guildid",
+        "Some server guildid",
+        "Some server guildid",
+        "Some server guildid"
+    ]
+}
