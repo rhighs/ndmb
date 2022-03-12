@@ -1,0 +1,8 @@
+{
+    "appId": 11111111,
+    "publicKey": "Application pubkey",
+    "oauth2": {
+        "clientId": "Should be same as appId... Search in developer portal",
+        "clientSecret": "Application client secret"
+    }
+}
