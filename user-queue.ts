@@ -1,17 +1,18 @@
 import Denque from "denque";
+import { YoutubeSong } from "./youtube";
 
 class SongQueue {
-    private deque: Denque<string>;
+    private deque: Denque<YoutubeSong>;
 
     public constructor(songs: string[]) {
         this.deque = new Denque();
     }
 
-    public next(): string | null {
-        if (this.deque.size() > 0) {
-            return this.deque.shift();
+    public next(): YoutubeSong | null {
+        if (this.deque.size() == 0) {
+            return null;
         }
 
-        return ;
+        return this.deque.shift();
     }
 }

@@ -72,7 +72,7 @@ cr.addReaction(PlayCommand.NAME, async (interaction) => {
 
     if (userVoiceChannel.joinable) {
         try {
-            playAudioInVoiceChannel(await maybeYoutube(userInput), userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
+            await playAudioInVoiceChannel(await maybeYoutube(userInput), userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
             interaction.reply({
                 content: `Playing music at voice channel ${userVoiceChannel.id}`
             });
