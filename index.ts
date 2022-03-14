@@ -11,7 +11,7 @@ import { CommandReactions } from "./command-reactions";
 import { loadBotAndAppData } from "./configuration";
 import { playAudioInVoiceChannel } from "./audio-player";
 import { PlayCommand, AllCommandObjects } from "./command";
-import { youtubeUrlAsAudioStream } from "./youtube";
+import { YoutubeSong } from "./youtube";
 
 let data = loadBotAndAppData(
     "bot-data.json",
@@ -46,22 +46,33 @@ const initBotAndUpdateCommands = () => {
 
 let cr = new CommandReactions();
 
+const maybeYoutube = async (userInput: string): Promise<string> => {
+    let mediaUrl = "";
+
+    if (userInput.includes("youtube") === true) {
+        let ytSong = new YoutubeSong(userInput);
+        await ytSong.process();
+        mediaUrl = ytSong.rawMediaUrl;
+    } else if (userInput.substring(0, 4) !== "http") {
+        let ytSong = await YoutubeSong.searchYoutubeSong(userInput);
+        mediaUrl = ytSong.rawMediaUrl;
+    }
+
+    console.log("Found url:", mediaUrl);
+
+    return mediaUrl;
+}
+
 cr.addReaction(PlayCommand.NAME, async (interaction) => {
     const guild = client.guilds?.cache.get(interaction.guildId!);
     const member = guild?.members?.cache.get(interaction.member?.user.id!);
     const userVoiceChannel = member?.voice?.channel as VoiceChannel;
 
-    let mediaUrl = interaction.options.getString(PlayCommand.OPTION_NAME)!;
+    let userInput = interaction.options.getString(PlayCommand.OPTION_NAME)!;
 
     if (userVoiceChannel.joinable) {
         try {
-            if (mediaUrl.includes("youtube") === true) {
-                let urls = await youtubeUrlAsAudioStream(mediaUrl);
-                console.log(urls);
-                mediaUrl = urls[0];
-            }
-
-            playAudioInVoiceChannel(mediaUrl, userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
+            playAudioInVoiceChannel(await maybeYoutube(userInput), userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
             interaction.reply({
                 content: `Playing music at voice channel ${userVoiceChannel.id}`
             });

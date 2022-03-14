@@ -5,7 +5,7 @@ interface BotData {
     token: string,
     inviteLink: string,
     guildIds: Array<string>
-}
+};
 
 interface OAUTH2Data {
     clientId: string,
@@ -16,27 +16,38 @@ interface ApplicationData {
     appId: string,
     publicKey: string,
     oauth2: OAUTH2Data
-}
+};
 
 interface BotAndAppData {
     bot: BotData,
     application: ApplicationData
 };
 
-declare let appRoot: string;
-const loadBotAndAppData = (botConfigFilename: string, appConfigFilename: string, configDir: string = "./configurations"): BotAndAppData => {
-    const loadJsonData = (path: string): any => JSON.parse(fs.readFileSync(path, "utf8"));
+interface YoutubeData {
+    apiKey: string
+};
 
-    return {
-        bot: loadJsonData(configDir + "/" + botConfigFilename),
-        application: loadJsonData(configDir + "/" + appConfigFilename)
-    };
-}
+const loadJsonData = (path: string): any => JSON.parse(fs.readFileSync(path, "utf8"));
+
+const loadBotAndAppData = (botConfigFilename: string,
+    appConfigFilename: string,
+    configDir: string = "./configurations"
+): BotAndAppData => ({
+    bot: loadJsonData(configDir + "/" + botConfigFilename),
+    application: loadJsonData(configDir + "/" + appConfigFilename)
+});
+
+const loadYoutubeData = (filename: string,
+    configDir: string = "./configurations"
+): YoutubeData => ({
+    apiKey: loadJsonData(configDir + "/" + filename)
+});
 
 export {
     BotAndAppData,
     BotData,
     OAUTH2Data,
     ApplicationData,
-    loadBotAndAppData
+    loadBotAndAppData,
+    loadYoutubeData
 }

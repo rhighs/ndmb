@@ -1,5 +1,7 @@
 import { create as createYoutubeDl } from "youtube-dl-exec";
+
 const youtubedl = createYoutubeDl("./bin/youtube-dl.exe");
+import yts, { SearchResult } from "yt-search";
 
 const youtubeUrlAsAudioStream = async (youtubeUrl: string, audioExts: string[] = ["m4a", "mp3"]): Promise<string[]> => {
     return await youtubedl(youtubeUrl, {
@@ -18,22 +20,38 @@ const youtubeUrlAsAudioStream = async (youtubeUrl: string, audioExts: string[] =
 }
 
 class YoutubeSong {
-    public url: string;
     public name: string;
+    public youtubeUrl: string;
+    public rawMediaUrl: string = "";
 
-    public constructor(youtubeUrl: string) {
-        this.url = youtubeUrlAsAudioStream(youtubeUrl)[0];
+    public constructor(youtubeUrl: string, name: string = "") {
+        this.name = name;
+        this.youtubeUrl = youtubeUrl;
     }
 
-    public static youtubeSearch(songName: string): YoutubeSong {
-        let someUrl: string = "a fetched url";
-        {
-            // Somehow fetch a url first youtube result... play-dl? 
-        } 
-        return new YoutubeSong(someUrl);
+    public static async searchYoutubeSong(songName: string): Promise<YoutubeSong> {
+        return await yts(songName)
+            .then(async (results: SearchResult): Promise<YoutubeSong> => {
+                if (results.videos.length === 0) {
+                    throw Error("Couldn't find nay video given that name");
+                }
+
+                let video = results.videos[0];
+                let ytSong = new YoutubeSong(video.url, video.title);
+                await ytSong.process();
+
+                return ytSong;
+            });
+    }
+
+    public async process() {
+        console.log("Found", this.youtubeUrl, this.name);
+        await youtubeUrlAsAudioStream(this.youtubeUrl)
+            .then(results => this.rawMediaUrl = results[0]);
     }
 }
 
 export {
-    youtubeUrlAsAudioStream
+    youtubeUrlAsAudioStream,
+    YoutubeSong
 }
