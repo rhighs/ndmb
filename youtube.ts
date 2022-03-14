@@ -30,7 +30,7 @@ class YoutubeSong {
     }
 
     public static async searchYoutubeSong(songName: string): Promise<YoutubeSong> {
-        return await yts(songName)
+        return yts(songName)
             .then(async (results: SearchResult): Promise<YoutubeSong> => {
                 if (results.videos.length === 0) {
                     throw Error("Couldn't find nay video given that name");
@@ -45,7 +45,6 @@ class YoutubeSong {
     }
 
     public async process() {
-        console.log("Found", this.youtubeUrl, this.name);
         await youtubeUrlAsAudioStream(this.youtubeUrl)
             .then(results => this.rawMediaUrl = results[0]);
     }

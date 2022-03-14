@@ -13,6 +13,8 @@ import { playAudioInVoiceChannel } from "./audio-player";
 import { PlayCommand, AllCommandObjects } from "./command";
 import { YoutubeSong } from "./youtube";
 
+import { SongQueue } from "./user-queue"
+
 let data = loadBotAndAppData(
     "bot-data.json",
     "application-data.json",
@@ -58,7 +60,9 @@ const maybeYoutube = async (userInput: string): Promise<string> => {
         mediaUrl = ytSong.rawMediaUrl;
     }
 
-    console.log("Found url:", mediaUrl);
+    if (mediaUrl == "") {
+        mediaUrl = userInput;
+    }
 
     return mediaUrl;
 }
@@ -72,18 +76,18 @@ cr.addReaction(PlayCommand.NAME, async (interaction) => {
 
     if (userVoiceChannel.joinable) {
         try {
-            await playAudioInVoiceChannel(await maybeYoutube(userInput), userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
-            interaction.reply({
+            await interaction.reply({
                 content: `Playing music at voice channel ${userVoiceChannel.id}`
             });
+            playAudioInVoiceChannel(await maybeYoutube(userInput), userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
         } catch (error) {
-            interaction.reply({
-                content: `That doesn"t seem to be a valid audio stream, sorry ${member?.user.username}.`
+            await interaction.reply({
+                content: `That doesn't seem to be a valid audio stream, so sorry ${member?.user.username}`
             });
             console.error(error);
         }
     } else {
-        interaction.reply({
+        await interaction.reply({
             content: `Couldn"t join so sorry :(`
         });
     }
