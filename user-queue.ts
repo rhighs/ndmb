@@ -1,9 +1,19 @@
 import Denque from "denque";
+import { AudioPlayer } from "@discordjs/voice";
+
+interface UserQueue {
+    player: AudioPlayer | null,
+    queue: UrlQueue 
+};
+
+interface UserQueueByGuildId {
+    [key: string]: UserQueue
+};
 
 type MediaUrl = string;
 
-class SongQueue {
-    private deque: Denque<MediaUrl>;
+class UrlQueue {
+    private deque: Denque<MediaUrl> = new Denque();
 
     public next(): MediaUrl | null {
         if (this.deque.size() == 0) {
@@ -25,7 +35,9 @@ class SongQueue {
         }
 
         this.deque.splice(0, n - 1);
-        return this.deque.shift();
+        let popped = this.deque.shift();
+
+        return popped ? popped : null;
     }
 
     public clear(): void {
@@ -34,5 +46,6 @@ class SongQueue {
 }
 
 export {
-    SongQueue
+    UserQueueByGuildId,
+    UrlQueue
 }

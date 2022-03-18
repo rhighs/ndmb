@@ -1,17 +1,23 @@
 import DiscordJS from "discord.js";
 
-class PlayCommand {
+abstract class Command {
+    static NAME: string;
+
+    public static commandObject(): void {}
+};
+
+class PlayCommand implements Command {
     static NAME: string = "play";
     static OPTION_NAME: string = "input";
 
     public static commandObject() {
         return {
             name: this.NAME,
-            description: "Should play the url you have provided",
+            description: "Plays a song given a valid option",
             options: [
                 {
                     name: this.OPTION_NAME,
-                    description: "Viable source of media (An mp3 or any direct stream)",
+                    description: "mp3 link | youtube link | youtube video name to search for",
                     required: true,
                     type: DiscordJS.Constants.ApplicationCommandOptionTypes.STRING
                 }
@@ -20,7 +26,18 @@ class PlayCommand {
     }
 }
 
-class NextCommand {
+class StopCommand implements Command {
+    static NAME: string = "stop";
+
+    public static commandObject() {
+        return {
+            name: this.NAME,
+            description: "Stops the current playing song",
+        }
+    }
+}
+
+class NextCommand implements Command {
     static NAME: string = "next";
 
     public static commandObject() {
@@ -31,7 +48,7 @@ class NextCommand {
     }
 }
 
-class PrevCommand {
+class PrevCommand implements Command {
     static NAME: string = "prev";
 
     public static commandObject() {
@@ -45,10 +62,13 @@ class PrevCommand {
 const AllCommandObjects = [
     PlayCommand.commandObject(),
     NextCommand.commandObject(),
-    PrevCommand.commandObject()
+    PrevCommand.commandObject(),
+    StopCommand.commandObject()
 ];
 
 export {
     PlayCommand,
+    NextCommand,
+    StopCommand,
     AllCommandObjects
 }

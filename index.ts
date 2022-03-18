@@ -1,7 +1,7 @@
 import path from "path";
 
 // Discordjs imports
-import DiscordJS, { VoiceChannel } from "discord.js";
+import { CommandInteraction, VoiceChannel } from "discord.js";
 import { Client, Intents } from "discord.js";
 import { REST }  from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
@@ -10,10 +10,20 @@ import { Routes } from "discord-api-types/v9";
 import { CommandReactions } from "./command-reactions";
 import { loadBotAndAppData } from "./configuration";
 import { playAudioInVoiceChannel } from "./audio-player";
-import { PlayCommand, AllCommandObjects } from "./command";
-import { YoutubeSong } from "./youtube";
+import { PlayCommand, AllCommandObjects, StopCommand, NextCommand } from "./command";
+import { maybeYoutube } from "./youtube";
+import { UserQueueByGuildId, UrlQueue } from "./user-queue";
 
-import { SongQueue } from "./user-queue"
+import {
+    AudioPlayerIdleState,
+    AudioPlayerBufferingState,
+    AudioPlayerPausedState,
+    AudioPlayerPlayingState,
+    AudioPlayerState,
+    AudioPlayerStatus
+} from "@discordjs/voice";
+
+let userQueue: UserQueueByGuildId = {};
 
 let data = loadBotAndAppData(
     "bot-data.json",
@@ -35,6 +45,11 @@ const initBotAndUpdateCommands = () => {
     data.bot.guildIds.forEach((guildId: string) => {
         const rest = new REST({ version: "9" }).setToken(data.bot.token);
 
+        userQueue[guildId] = {
+            player: null,
+            queue: new UrlQueue()
+        }
+
         let restResponse = rest.put(
             Routes.applicationGuildCommands(data.application.oauth2.clientId, guildId),
             { body: AllCommandObjects }
@@ -48,42 +63,80 @@ const initBotAndUpdateCommands = () => {
 
 let cr = new CommandReactions();
 
-const maybeYoutube = async (userInput: string): Promise<string> => {
-    let mediaUrl = "";
+cr.addReaction(StopCommand.NAME, async (interaction: CommandInteraction) => {
+    const guild = client.guilds?.cache.get(interaction.guildId!);
+    const member = guild?.members?.cache.get(interaction.member?.user.id!);
+    const userVoiceChannel = member?.voice?.channel as VoiceChannel;
 
-    if (userInput.includes("youtube") === true) {
-        let ytSong = new YoutubeSong(userInput);
-        await ytSong.process();
-        mediaUrl = ytSong.rawMediaUrl;
-    } else if (userInput.substring(0, 4) !== "http") {
-        let ytSong = await YoutubeSong.searchYoutubeSong(userInput);
-        mediaUrl = ytSong.rawMediaUrl;
+    let player = userQueue[guild!.id].player;
+    if (player !== null) {
+        await interaction.reply({
+            content: `Stopped music at voice channel ${userVoiceChannel.id}`
+        });
+        player.stop();
     }
+});
 
-    if (mediaUrl == "") {
-        mediaUrl = userInput;
+cr.addReaction(NextCommand.NAME, async (interaction: CommandInteraction) => {
+    const guild = client.guilds?.cache.get(interaction.guildId!);
+    const member = guild?.members?.cache.get(interaction.member?.user.id!);
+    const userVoiceChannel = member?.voice?.channel as VoiceChannel;
+
+    let player = userQueue[guild!.id].player;
+    if (player !== null) {
+        let url = userQueue[guild!.id].queue.next();
+
+        if (!url) {
+            await interaction.reply({
+                content: `There is no other song to be played, perhaps you might want to use /stop now`
+            });
+
+            return;
+        }
+
+        playAudioInVoiceChannel(url!, userVoiceChannel, interaction.guild?.voiceAdapterCreator!)
+            .then(player => {
+                userQueue[guild!.id].player = player
+            });
     }
+});
 
-    return mediaUrl;
-}
-
-cr.addReaction(PlayCommand.NAME, async (interaction) => {
+cr.addReaction(PlayCommand.NAME, async (interaction: CommandInteraction) => {
     const guild = client.guilds?.cache.get(interaction.guildId!);
     const member = guild?.members?.cache.get(interaction.member?.user.id!);
     const userVoiceChannel = member?.voice?.channel as VoiceChannel;
 
     let userInput = interaction.options.getString(PlayCommand.OPTION_NAME)!;
+    let url = await maybeYoutube(userInput);
 
     if (userVoiceChannel.joinable) {
         try {
-            await interaction.reply({
-                content: `Playing music at voice channel ${userVoiceChannel.id}`
-            });
-            playAudioInVoiceChannel(await maybeYoutube(userInput), userVoiceChannel, interaction.guild?.voiceAdapterCreator!);
+            let currentPlayer = userQueue[guild!.id].player;
+
+            if (currentPlayer && (currentPlayer.state.status === AudioPlayerStatus.Playing
+                || currentPlayer.state.status === AudioPlayerStatus.Paused
+                || currentPlayer.state.status === AudioPlayerStatus.AutoPaused)) {
+                interaction.reply({
+                    content: `Added to queue at voice channel ${userVoiceChannel.id}`
+                });
+
+                userQueue[guild!.id].queue.push(url);
+            } else {
+                interaction.reply({
+                    content: `Playing music at voice channel ${userVoiceChannel.id}`
+                });
+
+                playAudioInVoiceChannel(url, userVoiceChannel, interaction.guild?.voiceAdapterCreator!)
+                    .then(player => {
+                        userQueue[guild!.id].player = player
+                    });
+            }
+
         } catch (error) {
             await interaction.reply({
                 content: `That doesn't seem to be a valid audio stream, so sorry ${member?.user.username}`
             });
+
             console.error(error);
         }
     } else {
