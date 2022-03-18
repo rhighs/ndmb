@@ -1,6 +1,7 @@
 import { VoiceChannel } from "discord.js";
 
 import {
+    AudioPlayer,
     joinVoiceChannel,
     createAudioPlayer,
     createAudioResource,
@@ -8,7 +9,8 @@ import {
     StreamType,
     AudioPlayerStatus,
     VoiceConnectionStatus,
-    DiscordGatewayAdapterCreator
+    DiscordGatewayAdapterCreator,
+    PlayerSubscription
 } from '@discordjs/voice';
 
 const channelConnection = async (channel: VoiceChannel, adapterCreator: DiscordGatewayAdapterCreator) => {
@@ -29,24 +31,29 @@ const channelConnection = async (channel: VoiceChannel, adapterCreator: DiscordG
 
 const playAudioInVoiceChannel = async (stream: string | Blob | Int32Array,
     voiceChannel: VoiceChannel,
-    voiceAdapterCreator: DiscordGatewayAdapterCreator
+    voiceAdapterCreator: DiscordGatewayAdapterCreator,
+    audioPlayer : AudioPlayer | null = null
 ) => {
-    const audioPlayer = createAudioPlayer();
+    if (!audioPlayer) {
+        audioPlayer = createAudioPlayer();
+    }
 
-    const playSong = async (resourceUrl: string) => {
+    const playSong = async (resourceUrl: string): Promise<AudioPlayer> => {
         const resource = createAudioResource(resourceUrl, {
             inputType: StreamType.Arbitrary,
         });
 
-        audioPlayer.play(resource);
+        audioPlayer!.play(resource);
 
-        return entersState(audioPlayer, AudioPlayerStatus.Playing, 5e3);
+        return entersState(audioPlayer!, AudioPlayerStatus.Playing, 5e3);
     }
 
-    await playSong(stream as string);
+    let player = await playSong(stream as string);
 
     let connection = await channelConnection(voiceChannel, voiceAdapterCreator);
-    connection.subscribe(audioPlayer);
+    connection.subscribe(audioPlayer!);
+
+    return player;
 }
 
 export {
