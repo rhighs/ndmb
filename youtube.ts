@@ -3,6 +3,27 @@ import { create as createYoutubeDl } from "youtube-dl-exec";
 const youtubedl = createYoutubeDl("./bin/youtube-dl.exe");
 import yts, { SearchResult } from "yt-search";
 
+const ytEndpointPrefixes: string[] = [
+    "https://www.youtu.be",
+    "https://m.youtu.be",
+    "https://youtu.be",
+    "http://www.youtu.be",
+    "http://m.youtu.be",
+    "http://youtu.be",
+    "https://www.yotube",
+    "https://m.youtube",
+    "https://youtube",
+    "http://www.yotube",
+    "http://m.youtube",
+    "http://youtube"
+]
+
+const testPrefixes = (maybeYtUrl: string): boolean => {
+    return ytEndpointPrefixes
+        .filter(prefix => maybeYtUrl.substring(0, prefix.length) === prefix)
+        .length > 0
+}
+
 const youtubeUrlAsAudioStream = async (youtubeUrl: string, audioExts: string[] = ["m4a", "mp3"]): Promise<string[]> => {
     return await youtubedl(youtubeUrl, {
         dumpSingleJson: true,
@@ -50,7 +71,27 @@ class YoutubeSong {
     }
 }
 
+const maybeYoutube = async (userInput: string): Promise<string> => {
+    let mediaUrl = "";
+
+    if (testPrefixes(userInput) === true) {
+        let ytSong = new YoutubeSong(userInput);
+        await ytSong.process();
+        mediaUrl = ytSong.rawMediaUrl;
+    } else if (userInput.substring(0, 4) !== "http") {
+        let ytSong = await YoutubeSong.searchYoutubeSong(userInput);
+        mediaUrl = ytSong.rawMediaUrl;
+    }
+
+    if (mediaUrl == "") {
+        mediaUrl = userInput;
+    }
+
+    return mediaUrl;
+}
+
 export {
     youtubeUrlAsAudioStream,
-    YoutubeSong
+    YoutubeSong,
+    maybeYoutube
 }
